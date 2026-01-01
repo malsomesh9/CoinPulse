@@ -1,11 +1,13 @@
-import { getCoinData, getTrending } from '@/lib/coingecko.actions'
+import { getCoinData, getTrending, getOHLCData } from '@/lib/coingecko.actions'
 import DataTable from '@/component/DataTable'
+import CoinChart from '@/component/CoinChart'
 import React from 'react'
 
 
 const page = async () => {
   const trending = await getTrending();
   const btcData = await getCoinData('bitcoin');
+  const btcOHLC = await getOHLCData('bitcoin');
 
   return <main className="main-container">
     <section className="home-grid">
@@ -22,6 +24,9 @@ const page = async () => {
             <p>{btcData?.name || "Bitcoin"} / {btcData?.symbol?.toUpperCase() || "BTC"}</p>
             <h1>{(btcData?.current_price || 0).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</h1>
           </div>
+        </div>
+        <div className="h-[500px] w-full mt-4">
+          <CoinChart data={btcOHLC} coinId="bitcoin" />
         </div>
       </div>
 

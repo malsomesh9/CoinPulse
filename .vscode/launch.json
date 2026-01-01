@@ -1,0 +1,10 @@
+{
+    "configurations": [
+        {
+            "type": "chrome",
+            "name": "http://10.245.44.106:3000",
+            "request": "launch",
+            "url": "http://10.245.44.106:3000"
+        }
+    ]
+}

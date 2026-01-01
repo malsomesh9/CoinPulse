@@ -6,8 +6,7 @@ import { CoinGeckoErrorBody, PoolData, QueryParams, Trending } from '@/types';
 const BASE_URL = process.env.COINGECKO_BASE_URL;
 const API_KEY = process.env.COINGECKO_API_KEY;
 
-if (!BASE_URL) throw new Error('Could not get base url');
-if (!API_KEY) throw new Error('Could not get api key');
+
 
 export async function fetcher<T>(
     endpoint: string,
@@ -96,5 +95,19 @@ export async function getCoinData(id: string) {
     } catch (error) {
         console.log(error);
         return null;
+    }
+}
+
+export async function getOHLCData(id: string, days: string = '365') {
+    try {
+        const response = await fetcher<number[][]>(`/coins/${id}/ohlc`, {
+            vs_currency: 'usd',
+            days: days,
+        });
+
+        return response;
+    } catch (error) {
+        console.log(error);
+        return [];
     }
 }
