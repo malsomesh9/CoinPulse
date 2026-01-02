@@ -1,38 +1,56 @@
 'use server';
 
 import qs from 'query-string';
-import { CoinGeckoErrorBody, PoolData, QueryParams, Trending } from '@/types';
+import { CoinGeckoErrorBody, PoolData, QueryParams, Trending, Category } from '@/types';
 
-const BASE_URL = process.env.COINGECKO_BASE_URL;
+const CG_BASE_URL = (process.env.COINGECKO_BASE_URL || 'https://api.coingecko.com/api/v3').replace(/\/$/, '');
+const GT_BASE_URL = 'https://api.geckoterminal.com/api/v2';
 const API_KEY = process.env.COINGECKO_API_KEY;
-
-
 
 export async function fetcher<T>(
     endpoint: string,
     params?: QueryParams,
     revalidate = 60,
 ): Promise<T> {
+    const isGeckoTerminal = endpoint.startsWith('/onchain');
+    const baseUrl = isGeckoTerminal ? GT_BASE_URL : CG_BASE_URL;
+
+    // Sanitize endpoint to ensure no leading slash
+    const sanitizedEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
+
     const url = qs.stringifyUrl(
         {
-            url: `${BASE_URL}/${endpoint}`,
+            url: `${baseUrl}/${sanitizedEndpoint}`,
             query: params,
         },
         { skipEmptyString: true, skipNull: true },
     );
 
+    const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+    };
+
+    if (API_KEY && !isGeckoTerminal) {
+        // Only use CoinGecko API key for CoinGecko endpoints
+        headers['x-cg-pro-api-key'] = API_KEY;
+    }
+
     const response = await fetch(url, {
-        headers: {
-            'x-cg-demo-api-key': API_KEY,
-            'Content-Type': 'application/json',
-        } as Record<string, string>,
+        headers,
         next: { revalidate },
     });
 
     if (!response.ok) {
-        const errorBody: CoinGeckoErrorBody = await response.json().catch(() => ({}));
+        let errorBody: CoinGeckoErrorBody = {};
+        try {
+            errorBody = await response.json();
+        } catch (e) {
+            // Silently fail if body is not JSON
+        }
 
-        throw new Error(`API Error: ${response.status}: ${errorBody.error || response.statusText} `);
+        const errorMessage = errorBody.error || response.statusText || 'Unknown Error';
+        const apiName = isGeckoTerminal ? 'GeckoTerminal' : 'CoinGecko';
+        throw new Error(`${apiName} API Error ${response.status}: ${errorMessage} (URL: ${url})`);
     }
 
     return response.json();
@@ -105,6 +123,16 @@ export async function getOHLCData(id: string, days: string = '365') {
             days: days,
         });
 
+        return response;
+    } catch (error) {
+        console.log(error);
+        return [];
+    }
+}
+
+export async function getCategories(): Promise<Category[]> {
+    try {
+        const response = await fetcher<Category[]>('/coins/categories');
         return response;
     } catch (error) {
         console.log(error);
