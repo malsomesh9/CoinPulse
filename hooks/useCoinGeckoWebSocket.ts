@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   ExtendedPriceData,
   OHLCData,
+  OHLCVData,
   Trade,
   UseCoinGeckoWebSocketProps,
   UseCoinGeckoWebSocketReturn,
@@ -16,14 +17,15 @@ const WS_BASE = `${process.env.NEXT_PUBLIC_COINGECKO_WEBSOCKET_URL || DEFAULT_WS
 export const useCoinGeckoWebSocket = ({
   coinId,
   poolId,
-  liveInterval,
+  liveInterval = '1m',
 }: UseCoinGeckoWebSocketProps): UseCoinGeckoWebSocketReturn => {
   const wsRef = useRef<WebSocket | null>(null);
-  const subscribed = useRef(<Set<string>>new Set());
+  const subscribed = useRef<Set<string>>(new Set());
 
   const [price, setPrice] = useState<ExtendedPriceData | null>(null);
+  const [pricesMap, setPricesMap] = useState<Record<string, ExtendedPriceData>>({});
   const [trades, setTrades] = useState<Trade[]>([]);
-  const [ohlcv, setOhlcv] = useState<OHLCData | null>(null);
+  const [ohlcv, setOhlcv] = useState<OHLCVData | null>(null);
 
   const [isWsReady, setIsWsReady] = useState(false);
 
@@ -41,12 +43,13 @@ export const useCoinGeckoWebSocket = ({
         return;
       }
       if (msg.type === 'confirm_subscription') {
-        const { channel } = JSON.parse(msg?.identifier ?? '');
-
-        subscribed.current.add(channel);
+        const identifier = JSON.parse(msg?.identifier ?? '{}');
+        if (identifier.channel) {
+          subscribed.current.add(identifier.channel);
+        }
       }
       if (msg.c === 'C1') {
-        setPrice({
+        const update = {
           usd: msg.p ?? 0,
           coin: msg.i,
           price: msg.p,
@@ -54,7 +57,12 @@ export const useCoinGeckoWebSocket = ({
           marketCap: msg.m,
           volume24h: msg.v,
           timestamp: msg.t,
-        });
+        };
+
+        setPrice(update);
+        if (msg.i) {
+          setPricesMap((prev) => ({ ...prev, [msg.i!]: update }));
+        }
       }
       if (msg.c === 'G2') {
         const newTrade: Trade = {
@@ -65,17 +73,18 @@ export const useCoinGeckoWebSocket = ({
           amount: msg.to,
         };
 
-        setTrades((prev) => [newTrade, ...prev].slice(0, 7));
+        setTrades((prev) => [newTrade, ...prev].slice(0, 10));
       }
       if (msg.ch === 'G3') {
         const timestamp = msg.t ?? 0;
 
-        const candle: OHLCData = [
+        const candle: OHLCVData = [
           timestamp,
           Number(msg.o ?? 0),
           Number(msg.h ?? 0),
           Number(msg.l ?? 0),
           Number(msg.c ?? 0),
+          Number(msg.vo ?? 0),
         ];
 
         setOhlcv(candle);
@@ -83,14 +92,9 @@ export const useCoinGeckoWebSocket = ({
     };
 
     ws.onopen = () => setIsWsReady(true);
-
     ws.onmessage = handleMessage;
-
     ws.onclose = () => setIsWsReady(false);
-
-    ws.onerror = (error) => {
-      setIsWsReady(false);
-    };
+    ws.onerror = () => setIsWsReady(false);
 
     return () => ws.close();
   }, []);
@@ -109,7 +113,6 @@ export const useCoinGeckoWebSocket = ({
           identifier: JSON.stringify({ channel }),
         });
       });
-
       subscribed.current.clear();
     };
 
@@ -129,34 +132,36 @@ export const useCoinGeckoWebSocket = ({
 
     queueMicrotask(() => {
       setPrice(null);
+      setPricesMap({});
       setTrades([]);
       setOhlcv(null);
 
       unsubscribeAll();
 
       if (coinId) {
-        subscribe('CGSimplePrice', { coin_id: [coinId], action: 'set_tokens' });
+        const ids = Array.isArray(coinId) ? coinId : [coinId];
+        subscribe('CGSimplePrice', { coin_id: ids, action: 'set_tokens' });
+      }
+
+      const poolAddress = poolId?.replace('_', ':') ?? '';
+      if (poolAddress) {
+        subscribe('OnchainTrade', {
+          'network_id:pool_addresses': [poolAddress],
+          action: 'set_pools',
+        });
+
+        subscribe('OnchainOHLCV', {
+          'network_id:pool_addresses': [poolAddress],
+          interval: liveInterval,
+          action: 'set_pools',
+        });
       }
     });
-
-    const poolAddress = poolId?.replace('_', ':') ?? '';
-
-    if (poolAddress) {
-      subscribe('OnchainTrade', {
-        'network_id:pool_addresses': [poolAddress],
-        action: 'set_pools',
-      });
-
-      subscribe('OnchainOHLCV', {
-        'network_id:pool_addresses': [poolAddress],
-        interval: liveInterval,
-        action: 'set_pools',
-      });
-    }
   }, [coinId, poolId, isWsReady, liveInterval]);
 
   return {
     price,
+    pricesMap,
     trades,
     ohlcv,
     isConnected: isWsReady,

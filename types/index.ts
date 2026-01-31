@@ -1,4 +1,5 @@
 export type OHLCData = [number, number, number, number, number];
+export type OHLCVData = [number, number, number, number, number, number];
 
 
 export interface NextPageProps {
@@ -9,7 +10,7 @@ export interface NextPageProps {
 
 export interface CandlestickChartProps {
   data?: OHLCData[];
-  liveOhlcv?: OHLCData | null;
+  liveOhlcv?: OHLCVData | null;
   coinId: string;
   height?: number;
   children?: React.ReactNode;
@@ -80,7 +81,9 @@ export interface Trending {
   symbol: string;
   market_cap_rank: number;
   thumb: string;
+  small: string;
   large: string;
+
   data: {
     price: number;
     price_change_percentage_24h: {
@@ -227,6 +230,12 @@ export interface CoinDetailsData {
     total_volume: {
       usd: number;
     };
+    high_24h: {
+      usd: number;
+    };
+    low_24h: {
+      usd: number;
+    };
   };
   market_cap_rank: number;
   description: {
@@ -252,11 +261,17 @@ export interface LiveDataProps {
 
 export interface LiveCoinHeaderProps {
   name: string;
+  symbol: string;
   image: string;
   livePrice?: number;
   livePriceChangePercentage24h: number;
   priceChangePercentage30d: number;
   priceChange24h: number;
+  marketCap: number;
+  totalVolume: number;
+  high24h: number;
+  low24h: number;
+  rank: number;
 }
 
 
@@ -270,16 +285,17 @@ export interface Category {
 
 
 export interface UseCoinGeckoWebSocketProps {
-  coinId: string;
-  poolId: string;
+  coinId?: string | string[];
+  poolId?: string;
   liveInterval?: '1s' | '1m';
 }
 
 
 export interface UseCoinGeckoWebSocketReturn {
   price: ExtendedPriceData | null;
+  pricesMap?: Record<string, ExtendedPriceData>;
   trades: Trade[];
-  ohlcv: OHLCData | null;
+  ohlcv: OHLCVData | null;
   isConnected: boolean;
 }
 

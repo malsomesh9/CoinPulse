@@ -1,4 +1,6 @@
 import React from "react";
+import { Category } from "@/types";
+
 import {
     Table,
     TableBody,
@@ -47,8 +49,8 @@ const CategoryTable = ({ data }: CategoryProps) => {
                         </TableCell>
                         <TableCell
                             className={`text-right ${category.market_cap_change_24h > 0
-                                    ? "text-green-500"
-                                    : "text-red-500"
+                                ? "text-green-500"
+                                : "text-red-500"
                                 }`}
                         >
                             {category.market_cap_change_24h.toFixed(2)}%

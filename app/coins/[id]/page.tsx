@@ -7,6 +7,17 @@ import { ArrowUpRight } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import LiveDataWrapper from '@/components/LiveDataWrapper';
 import Converter from '@/components/Converter';
+import { Metadata } from 'next';
+
+export async function generateMetadata({ params }: NextPageProps): Promise<Metadata> {
+  const { id } = await params;
+  const coin = await fetcher<CoinDetailsData>(`/coins/${id}`);
+
+  return {
+    title: `${coin.name} (${coin.symbol.toUpperCase()}) | CoinPulse`,
+    description: `View real-time price, charts, and market data for ${coin.name}. Track live trades and historical OHLC data on CoinPulse.`,
+  };
+}
 
 const Page = async ({ params }: NextPageProps) => {
   const { id } = await params;
@@ -97,6 +108,16 @@ const Page = async ({ params }: NextPageProps) => {
             ))}
           </ul>
         </div>
+
+        {coinData.description?.en && (
+          <div className="mt-10 space-y-4">
+            <h4 className="text-xl font-bold">About {coinData.name}</h4>
+            <div
+              className="text-purple-100/70 leading-relaxed text-sm prose prose-invert max-w-none"
+              dangerouslySetInnerHTML={{ __html: coinData.description.en }}
+            />
+          </div>
+        )}
       </section>
     </main>
   );

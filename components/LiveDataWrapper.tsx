@@ -1,3 +1,5 @@
+'use client';
+
 import { Separator } from '@/components/ui/separator';
 import { DataTableColumn, LiveDataProps, Trade } from '@/types';
 
@@ -48,6 +50,7 @@ const LiveDataWrapper = ({ children, coinId, poolId, coin, coinOHLCData }: LiveD
     <section id="live-data-wrapper">
       <CoinHeader
         name={coin.name}
+        symbol={coin.symbol}
         image={coin.image.large}
         livePrice={price?.usd ?? coin.market_data.current_price.usd}
         livePriceChangePercentage24h={
@@ -55,6 +58,12 @@ const LiveDataWrapper = ({ children, coinId, poolId, coin, coinOHLCData }: LiveD
         }
         priceChangePercentage30d={coin.market_data.price_change_percentage_30d_in_currency.usd}
         priceChange24h={coin.market_data.price_change_24h_in_currency.usd}
+        marketCap={price?.marketCap ?? coin.market_data.market_cap.usd}
+        totalVolume={price?.volume24h ?? coin.market_data.total_volume.usd}
+        high24h={coin.market_data.high_24h?.usd || 0}
+        low24h={coin.market_data.low_24h?.usd || 0}
+        rank={coin.market_cap_rank}
+        coinId={coinId}
       />
       <Separator className="divider" />
 

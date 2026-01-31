@@ -54,6 +54,18 @@
   --color-green-300: var(--green-300);
   --color-red-500: var(--red-500);
   --color-yellow-500: var(--yellow-500);
+
+  --animate-marquee: marquee 30s linear infinite;
+
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+
+    to {
+      transform: translateX(-50%);
+    }
+  }
 }
 
 :root {
@@ -145,8 +157,21 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
-    @apply bg-dark-700 text-foreground;
+    @apply bg-dark-700 text-foreground relative min-h-screen overflow-x-hidden;
+
+    &::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at 50% 0%, #1b254b 0%, transparent 50%);
+      pointer-events: none;
+      z-index: -10;
+    }
   }
 }
 
@@ -156,7 +181,7 @@
   }
 
   .main-container {
-    @apply py-6 md:py-12 mx-auto px-4 sm:px-6 max-w-360 w-full space-y-6 md:space-y-6;
+    @apply py-6 md:py-12 mx-auto px-4 sm:px-6 max-w-360 w-full space-y-16 md:space-y-24;
   }
 
   .badge {
@@ -176,7 +201,8 @@
   }
 
   header {
-    @apply border-b border-dark-400 h-20;
+    @apply border-b border-white/5 bg-dark-900/50 backdrop-blur-xl sticky top-0 z-40 h-20;
+
 
     .inner {
       @apply flex justify-between items-center h-full;
@@ -625,8 +651,9 @@
 
   #search-modal {
     .trigger {
-      @apply px-6 hover:bg-transparent! font-medium transition-all h-full cursor-pointer text-base text-purple-100 flex items-center gap-2;
+      @apply px-4 py-2 rounded-lg bg-dark-400/50 hover:bg-dark-400 border border-white/5 transition-all cursor-pointer text-sm text-purple-100 flex items-center gap-2;
     }
+
 
     .kbd {
       @apply pointer-events-none hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100;
@@ -663,7 +690,7 @@
     }
 
     .search-item {
-      @apply grid grid-cols-4 gap-4 items-center justify-between data-[selected=true]:bg-dark-400 transition-all !cursor-pointer hover:bg-dark-400 py-3;
+      @apply grid grid-cols-4 gap-4 items-center justify-between data-[selected=true]:bg-dark-400 transition-all cursor-pointer! hover:bg-dark-400 py-3;
 
       .coin-info {
         @apply flex gap-4 items-center col-span-2;
@@ -922,6 +949,52 @@
       .time-cell {
         @apply pr-5;
       }
+    }
+  }
+
+  /* Ticker Styles */
+  .global-stats-ticker {
+    @apply bg-dark-900 border-b border-white/5 py-2 overflow-hidden z-50 relative;
+
+    .inner {
+      @apply flex items-center justify-center gap-6 md:gap-12 px-4;
+    }
+
+    .stat-item {
+      @apply flex items-center gap-2 text-xs md:text-sm whitespace-nowrap;
+
+      .label {
+        @apply text-purple-100/50;
+      }
+
+      .value {
+        @apply text-white font-semibold;
+      }
+
+      .change {
+        @apply font-medium;
+      }
+    }
+  }
+
+  .trending-ticker-wrapper {
+    @apply ml-8 flex items-center gap-4 max-xl:hidden flex-1 overflow-hidden;
+
+    .label {
+      @apply text-purple-100/50 text-xs font-bold uppercase tracking-wider;
+    }
+
+    .ticker-container {
+      @apply overflow-hidden relative flex-1;
+      mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+    }
+
+    .ticker-content {
+      @apply flex gap-8 animate-marquee w-fit;
+    }
+
+    .ticker-item {
+      @apply flex items-center gap-2 text-sm text-purple-100/80 hover:text-white transition-colors;
     }
   }
 }

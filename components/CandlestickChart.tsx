@@ -1,3 +1,5 @@
+'use client';
+
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { CandlestickChartProps, OHLCData, Period } from '@/types';
 
@@ -8,7 +10,7 @@ import {
   PERIOD_BUTTONS,
   PERIOD_CONFIG,
 } from '@/constants';
-import { CandlestickSeries, createChart, IChartApi, ISeriesApi } from 'lightweight-charts';
+import { CandlestickSeries, createChart, HistogramSeries, IChartApi, ISeriesApi, LineSeries, Time } from 'lightweight-charts';
 import { fetcher } from '@/lib/coingecko.actions';
 import { convertOHLCData } from '@/lib/utils';
 
@@ -58,6 +60,22 @@ const CandlestickChart = ({
     fetchOHLCData(newPeriod);
   };
 
+  const ma7SeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
+  const ma25SeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
+
+  const calculateSMA = (data: { time: Time; close: number }[], period: number) => {
+    const result = [];
+    for (let i = period; i <= data.length; i++) {
+      const slice = data.slice(i - period, i);
+      const sum = slice.reduce((acc, item) => acc + item.close, 0);
+      result.push({
+        time: data[i - 1].time,
+        value: sum / period,
+      });
+    }
+    return result;
+  };
+
   useEffect(() => {
     const container = chartContainerRef.current;
     if (!container) return;
@@ -68,17 +86,27 @@ const CandlestickChart = ({
       ...getChartConfig(height, showTime),
       width: container.clientWidth,
     });
+
+    // Series
     const series = chart.addSeries(CandlestickSeries, getCandlestickConfig());
+    const ma7 = chart.addSeries(LineSeries, { color: '#fcd34d', lineWidth: 1, title: 'MA(7)' });
+    const ma25 = chart.addSeries(LineSeries, { color: '#a855f7', lineWidth: 1, title: 'MA(25)' });
 
     const convertedToSeconds = ohlcData.map(
       (item) => [Math.floor(item[0] / 1000), item[1], item[2], item[3], item[4]] as OHLCData,
     );
 
-    series.setData(convertOHLCData(convertedToSeconds));
+    const converted = convertOHLCData(convertedToSeconds);
+    series.setData(converted);
+    ma7.setData(calculateSMA(converted, 7));
+    ma25.setData(calculateSMA(converted, 25));
+
     chart.timeScale().fitContent();
 
     chartRef.current = chart;
     candleSeriesRef.current = series;
+    ma7SeriesRef.current = ma7;
+    ma25SeriesRef.current = ma25;
 
     const observer = new ResizeObserver((entries) => {
       if (!entries.length) return;
@@ -91,11 +119,13 @@ const CandlestickChart = ({
       chart.remove();
       chartRef.current = null;
       candleSeriesRef.current = null;
+      ma7SeriesRef.current = null;
+      ma25SeriesRef.current = null;
     };
   }, [height, period]);
 
   useEffect(() => {
-    if (!candleSeriesRef.current) return;
+    if (!candleSeriesRef.current || !ma7SeriesRef.current || !ma25SeriesRef.current) return;
 
     const convertedToSeconds = ohlcData.map(
       (item) => [Math.floor(item[0] / 1000), item[1], item[2], item[3], item[4]] as OHLCData,
@@ -104,23 +134,24 @@ const CandlestickChart = ({
     let merged: OHLCData[];
 
     if (liveOhlcv) {
-      const liveTimestamp = liveOhlcv[0];
-
+      const liveTimestamp = Math.floor(liveOhlcv[0] / 1000);
       const lastHistoricalCandle = convertedToSeconds[convertedToSeconds.length - 1];
 
       if (lastHistoricalCandle && lastHistoricalCandle[0] === liveTimestamp) {
-        merged = [...convertedToSeconds.slice(0, -1), liveOhlcv];
+        merged = [...convertedToSeconds.slice(0, -1), [liveTimestamp, ...liveOhlcv.slice(1)] as OHLCData];
       } else {
-        merged = [...convertedToSeconds, liveOhlcv];
+        merged = [...convertedToSeconds, [liveTimestamp, ...liveOhlcv.slice(1)] as OHLCData];
       }
     } else {
       merged = convertedToSeconds;
     }
 
     merged.sort((a, b) => a[0] - b[0]);
-
     const converted = convertOHLCData(merged);
+
     candleSeriesRef.current.setData(converted);
+    ma7SeriesRef.current.setData(calculateSMA(converted, 7));
+    ma25SeriesRef.current.setData(calculateSMA(converted, 25));
 
     const dataChanged = prevOhlcDataLength.current !== ohlcData.length;
 

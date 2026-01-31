@@ -31,8 +31,8 @@ export async function fetcher<T>(
     };
 
     if (API_KEY && !isGeckoTerminal) {
-        // Only use CoinGecko API key for CoinGecko endpoints
-        headers['x-cg-pro-api-key'] = API_KEY;
+        const isPro = baseUrl.includes('pro-api');
+        headers[isPro ? 'x-cg-pro-api-key' : 'x-cg-demo-api-key'] = API_KEY;
     }
 
     const response = await fetch(url, {
@@ -137,5 +137,54 @@ export async function getCategories(): Promise<Category[]> {
     } catch (error) {
         console.log(error);
         return [];
+    }
+}
+
+export async function searchCoins(query: string): Promise<any[]> {
+    try {
+        const response = await fetcher<{ coins: any[] }>('/search', { query });
+        return response.coins;
+    } catch (error) {
+        console.log(error);
+        return [];
+    }
+}
+
+export async function getGlobalData(): Promise<any> {
+    try {
+        const response = await fetcher<{ data: any }>('/global');
+        return response.data;
+    } catch (error) {
+        console.log(error);
+        return null;
+    }
+}
+
+export async function getTopGainersLosers() {
+    try {
+        const [gainers, losers] = await Promise.all([
+            fetcher<any[]>('/coins/markets', {
+                vs_currency: 'usd',
+                order: 'price_change_percentage_24h_desc',
+                per_page: 5,
+                page: 1,
+                price_change_percentage: '24h',
+            }),
+            fetcher<any[]>('/coins/markets', {
+                vs_currency: 'usd',
+                order: 'price_change_percentage_24h_asc',
+                per_page: 5,
+                page: 1,
+                price_change_percentage: '24h',
+            }),
+        ]);
+
+        return {
+            top_gainers: gainers || [],
+            top_losers: losers || [],
+        };
+    } catch (error) {
+        console.error('Error fetching top gainers/losers:', error);
+        return { top_gainers: [], top_losers: [] };
     }
 }

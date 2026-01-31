@@ -4,29 +4,37 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { Search } from 'lucide-react';
+import SearchModal from '@/components/SearchModal';
+import { useState } from 'react';
 
-const Header = () => {
+
+
+const Header = ({ children }: { children?: React.ReactNode }) => {
   const pathname = usePathname();
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+
 
   return (
     <header>
       <div className="main-container inner">
-        <Link href="/">
-          <Image src="/logo.svg" alt="CoinPulse logo" width={132} height={40} />
-        </Link>
+        <div className="flex items-center flex-1">
+          <Link href="/">
+            <Image src="/logo.svg" alt="CoinPulse logo" width={132} height={40} />
+          </Link>
 
-        <nav>
+          {children}
+        </div>
+
+        <nav className="flex items-center gap-2">
           <Link
             href="/"
             className={cn('nav-link', {
               'is-active': pathname === '/',
-              'is-home': true,
             })}
           >
             Home
           </Link>
-
-          <p>Search Modal</p>
 
           <Link
             href="/coins"
@@ -34,9 +42,18 @@ const Header = () => {
               'is-active': pathname === '/coins',
             })}
           >
-            All Coins
+            Coins
           </Link>
+
+          <div className="search-trigger ml-4" onClick={() => setIsSearchOpen(true)}>
+            <Search size={18} />
+            <span className="max-sm:hidden">Search</span>
+            <kbd className="kbd">⌘K</kbd>
+          </div>
         </nav>
+
+        <SearchModal isOpen={isSearchOpen} setIsOpen={setIsSearchOpen} />
+
       </div>
     </header>
   );
